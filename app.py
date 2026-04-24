@@ -42,17 +42,6 @@ def home():
     })
 
 
-@app.route("/debug-env")
-def debug_env():
-    return jsonify({
-        "DB_SERVER": os.getenv("DB_SERVER"),
-        "DB_DATABASE": os.getenv("DB_DATABASE"),
-        "DB_USERNAME": os.getenv("DB_USERNAME"),
-        "DB_PASSWORD_EXISTS": bool(os.getenv("DB_PASSWORD")),
-        "DB_PORT": os.getenv("DB_PORT"),
-    })
-
-
 @app.route("/test-db")
 def test_db():
     conn = None
@@ -60,18 +49,16 @@ def test_db():
     try:
         conn = get_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT GETDATE() AS fecha_servidor")
+        cursor.execute("SELECT GETDATE()")
         row = cursor.fetchone()
 
         return jsonify({
             "success": True,
-            "message": "Conexión a SQL Server exitosa",
             "server_date": str(row[0])
         })
     except Exception as e:
         return jsonify({
             "success": False,
-            "message": "Error al conectar con SQL Server",
             "error": str(e)
         }), 500
     finally:
@@ -81,6 +68,7 @@ def test_db():
             conn.close()
 
 
+# 🔥 ENDPOINT CORREGIDO
 @app.route("/productos")
 def listar_productos():
     conn = None
@@ -89,11 +77,19 @@ def listar_productos():
         conn = get_connection()
         cursor = conn.cursor()
 
+        # ✅ AQUÍ ESTÁ LA CLAVE (agregamos stock y version)
         cursor.execute("""
-            SELECT TOP 20 id, nombre, precio, imagen_url
+            SELECT TOP 20 
+                id, 
+                nombre, 
+                precio, 
+                stock, 
+                version, 
+                imagen_url
             FROM productos
             ORDER BY id DESC
         """)
+
         rows = cursor.fetchall()
 
         data = []
@@ -101,21 +97,24 @@ def listar_productos():
             data.append({
                 "id": row[0],
                 "nombre": row[1],
-                "precio": float(row[2]) if row[2] is not None else None,
-                "imagen_url": row[3],
-                 "stock": row[4] if row[4] is not None else 0,
+                "precio": float(row[2]) if row[2] is not None else 0,
+                "stock": int(row[3]) if row[3] is not None else 0,
+                "version": str(row[4]) if row[4] is not None else "",
+                "imagen_url": row[5],
             })
 
         return jsonify({
             "success": True,
             "data": data
         })
+
     except Exception as e:
         return jsonify({
             "success": False,
             "message": "Error al consultar productos",
             "error": str(e)
         }), 500
+
     finally:
         if cursor:
             cursor.close()
