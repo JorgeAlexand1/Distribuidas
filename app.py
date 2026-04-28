@@ -5,21 +5,24 @@ from mssql_python import connect
 
 app = Flask(__name__)
 
-resend.api_key = os.getenv("RESEND_API_KEY")
-
 def enviar_correo_alerta(asunto, mensaje, destino):
+    email_remitente = os.getenv("EMAIL_USER")
+    email_password = os.getenv("EMAIL_PASSWORD")
+
+    msg = EmailMessage()
+    msg.set_content(mensaje)
+    msg['Subject'] = asunto
+    msg['From'] = email_remitente
+    msg['To'] = destino
+
+    # Conexión directa SSL (Puerto 465) para evitar retardos de STARTTLS
     try:
-        # En el plan gratuito de Resend, el "from" debe ser este obligatoriamente
-        # hasta que verifiques un dominio propio.
-        r = resend.Emails.send({
-            "from": "onboarding@resend.dev",
-            "to": destino,
-            "subject": asunto,
-            "html": f"<p>{mensaje}</p>"
-        })
-        return r
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=15) as server:
+            server.login(email_remitente, email_password)
+            server.send_message(msg)
+        return True
     except Exception as e:
-        print(f"Error en Resend: {e}")
+        print(f"Error SMTP: {e}")
         raise e
 
 def get_connection():
@@ -140,7 +143,6 @@ def listar_productos():
 
 
 
-# ... (Tus funciones get_connection, home, test_db, listar_productos se mantienen igual)
 
 @app.route("/enviar-alerta", methods=["POST"])
 def enviar_alerta():
@@ -149,22 +151,15 @@ def enviar_alerta():
         destino = data.get("to")
         asunto = data.get("subject")
         mensaje = data.get("message")
-        
+
         if not all([destino, asunto, mensaje]):
-             return jsonify({"success": False, "error": "Faltan campos"}), 400
+            return jsonify({"success": False, "error": "Faltan datos"}), 400
 
         enviar_correo_alerta(asunto, mensaje, destino)
         
-        return jsonify({
-            "success": True, 
-            "message": "Alerta enviada con éxito mediante Resend"
-        })
+        return jsonify({"success": True, "message": "Correo enviado con Gmail"})
     except Exception as e:
-        return jsonify({
-            "success": False, 
-            "error_detalle": str(e)
-        }), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
