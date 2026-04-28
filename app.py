@@ -8,7 +8,7 @@ app = Flask(__name__)
 def enviar_correo_alerta(asunto, mensaje, destino):
     # Extraemos las credenciales de las variables de entorno de Render
     email_remitente = os.getenv("EMAIL_USER")
-    email_password = os.getenv("EMAIL_PASS")
+    email_password = os.getenv("EMAIL_PASSWORD")
 
     # Configuración del mensaje
     msg = MIMEText(mensaje)
