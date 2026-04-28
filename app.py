@@ -1,32 +1,31 @@
 import os
 import smtplib
-from email.mime.text import MIMEText
+# Simplificamos los imports de email
+from email.message import EmailMessage 
 from flask import Flask, jsonify, request
 from mssql_python import connect
 
 app = Flask(__name__)
 
 def enviar_correo_alerta(asunto, mensaje, destino):
-    # Extraemos las credenciales de las variables de entorno de Render
     email_remitente = os.getenv("EMAIL_USER")
     email_password = os.getenv("EMAIL_PASSWORD")
 
-    # Configuración del mensaje
-    msg = MIMEText(mensaje)
+    # Usamos EmailMessage que es más moderno y estable
+    msg = EmailMessage()
+    msg.set_content(mensaje)
     msg['Subject'] = asunto
     msg['From'] = email_remitente
     msg['To'] = destino
 
-    # Conexión al servidor SMTP de Gmail
     try:
-        # Gmail usa el puerto 587 para TLS
-        with smtplib.SMTP("smtp.gmail.com", 587) as server:
-            server.starttls() # Cifrado de seguridad
+        # Forzamos el contexto de seguridad
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
             server.login(email_remitente, email_password)
             server.send_message(msg)
         return True
     except Exception as e:
-        print(f"Error enviando correo: {e}")
+        print(f"DEBUG SMTP: {str(e)}")
         raise e
 
 def get_connection():
