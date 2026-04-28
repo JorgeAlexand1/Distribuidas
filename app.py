@@ -1,5 +1,6 @@
 import os
-import resend
+import smtplib
+from email.message import EmailMessage
 from flask import Flask, jsonify, request
 from mssql_python import connect
 
