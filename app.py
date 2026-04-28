@@ -121,29 +121,32 @@ app = Flask(__name__)
         if conn:
             conn.close()
 
-@app.route("/enviar-alerta", methods=["POST"]) Práctica
+@app.route("/enviar-alerta", methods=["POST"]) 
 def enviar_alerta():
-try:
-data = request.get_json()
-destino = data.get("to")
-asunto = data.get("subject")
-mensaje = data.get("message")
-if not destino or not asunto or not mensaje:
-return jsonify({
-"success": False,
-"message": "Faltan datos"
-}), 400
-enviar_correo_alerta(asunto, mensaje, destino)
-return jsonify({
-"success": True,
-"message": "Correo enviado"
-})
-except Exception as e:
-return jsonify({
-"success": False,
-"error": str(e)
-}), 500
-
+    try:
+        data = request.get_json()
+        destino = data.get("to")
+        asunto = data.get("subject")
+        mensaje = data.get("message")
+        
+        if not destino or not asunto or not mensaje:
+            return jsonify({
+                "success": False,
+                "message": "Faltan datos"
+            }), 400
+            
+        # Ensure you have defined 'enviar_correo_alerta' somewhere!
+        enviar_correo_alerta(asunto, mensaje, destino) 
+        
+        return jsonify({
+            "success": True,
+            "message": "Correo enviado"
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
