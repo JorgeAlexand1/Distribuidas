@@ -1,31 +1,25 @@
 import os
-import smtplib
-# Simplificamos los imports de email
-from email.message import EmailMessage 
+import resend
 from flask import Flask, jsonify, request
 from mssql_python import connect
 
 app = Flask(__name__)
 
+resend.api_key = os.getenv("RESEND_API_KEY")
+
 def enviar_correo_alerta(asunto, mensaje, destino):
-    email_remitente = os.getenv("EMAIL_USER")
-    email_password = os.getenv("EMAIL_PASSWORD")
-
-    # Usamos EmailMessage que es más moderno y estable
-    msg = EmailMessage()
-    msg.set_content(mensaje)
-    msg['Subject'] = asunto
-    msg['From'] = email_remitente
-    msg['To'] = destino
-
     try:
-        # Forzamos el contexto de seguridad
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(email_remitente, email_password)
-            server.send_message(msg)
-        return True
+        # En el plan gratuito de Resend, el "from" debe ser este obligatoriamente
+        # hasta que verifiques un dominio propio.
+        r = resend.Emails.send({
+            "from": "onboarding@resend.dev",
+            "to": destino,
+            "subject": asunto,
+            "html": f"<p>{mensaje}</p>"
+        })
+        return r
     except Exception as e:
-        print(f"DEBUG SMTP: {str(e)}")
+        print(f"Error en Resend: {e}")
         raise e
 
 def get_connection():
@@ -151,28 +145,24 @@ def listar_productos():
 @app.route("/enviar-alerta", methods=["POST"])
 def enviar_alerta():
     try:
-        data = request.get_json()
+        data = request.get_json(force=True)
         destino = data.get("to")
         asunto = data.get("subject")
         mensaje = data.get("message")
         
-        if not destino or not asunto or not mensaje:
-            return jsonify({
-                "success": False,
-                "message": "Faltan datos (to, subject o message)"
-            }), 400
-            
-        # Llamamos a la función de envío real
+        if not all([destino, asunto, mensaje]):
+             return jsonify({"success": False, "error": "Faltan campos"}), 400
+
         enviar_correo_alerta(asunto, mensaje, destino)
         
         return jsonify({
-            "success": True,
-            "message": "Correo enviado exitosamente mediante Gmail"
+            "success": True, 
+            "message": "Alerta enviada con éxito mediante Resend"
         })
     except Exception as e:
         return jsonify({
-            "success": False,
-            "error": str(e)
+            "success": False, 
+            "error_detalle": str(e)
         }), 500
 
 if __name__ == "__main__":
