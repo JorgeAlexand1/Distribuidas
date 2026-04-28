@@ -1,9 +1,32 @@
 import os
+from email.mime.text import MIMEText
 from flask import Flask, jsonify, request
 from mssql_python import connect
 
 app = Flask(__name__)
 
+def enviar_correo_alerta(asunto, mensaje, destino):
+    # Extraemos las credenciales de las variables de entorno de Render
+    email_remitente = os.getenv("EMAIL_USER")
+    email_password = os.getenv("EMAIL_PASS")
+
+    # Configuración del mensaje
+    msg = MIMEText(mensaje)
+    msg['Subject'] = asunto
+    msg['From'] = email_remitente
+    msg['To'] = destino
+
+    # Conexión al servidor SMTP de Gmail
+    try:
+        # Gmail usa el puerto 587 para TLS
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls() # Cifrado de seguridad
+            server.login(email_remitente, email_password)
+            server.send_message(msg)
+        return True
+    except Exception as e:
+        print(f"Error enviando correo: {e}")
+        raise e
 
 def get_connection():
     server = os.getenv("DB_SERVER")
@@ -121,7 +144,11 @@ def listar_productos():
         if conn:
             conn.close()
 
-@app.route("/enviar-alerta", methods=["POST"]) 
+
+
+# ... (Tus funciones get_connection, home, test_db, listar_productos se mantienen igual)
+
+@app.route("/enviar-alerta", methods=["POST"])
 def enviar_alerta():
     try:
         data = request.get_json()
@@ -132,15 +159,15 @@ def enviar_alerta():
         if not destino or not asunto or not mensaje:
             return jsonify({
                 "success": False,
-                "message": "Faltan datos"
+                "message": "Faltan datos (to, subject o message)"
             }), 400
             
-        # Ensure you have defined 'enviar_correo_alerta' somewhere!
-        enviar_correo_alerta(asunto, mensaje, destino) 
+        # Llamamos a la función de envío real
+        enviar_correo_alerta(asunto, mensaje, destino)
         
         return jsonify({
             "success": True,
-            "message": "Correo enviado"
+            "message": "Correo enviado exitosamente mediante Gmail"
         })
     except Exception as e:
         return jsonify({
