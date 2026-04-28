@@ -5,7 +5,7 @@ from mssql_python import connect
 app = Flask(__name__)
 
 
-#def get_connection():
+def get_connection():
     server = os.getenv("DB_SERVER")
     database = os.getenv("DB_DATABASE")
     username = os.getenv("DB_USERNAME")
@@ -34,16 +34,16 @@ app = Flask(__name__)
     return connect(connection_string)
 
 
-#@app.route("/")
-#def home():
+@app.route("/")
+def home():
     return jsonify({
         "success": True,
         "message": "API Flask funcionando correctamente en Render"
     })
 
 
-#@app.route("/test-db")
-#def test_db():
+@app.route("/test-db")
+def test_db():
     conn = None
     cursor = None
     try:
@@ -69,8 +69,8 @@ app = Flask(__name__)
 
 
 # 🔥 ENDPOINT CORREGIDO
-#@app.route("/productos")
-#def listar_productos():
+@app.route("/productos")
+def listar_productos():
     conn = None
     cursor = None
     try:
