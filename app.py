@@ -1,9 +1,11 @@
 import os
 import resend
 from flask import Flask, jsonify, request
+from flask_cors import CORS  # <--- Importa esto
 from mssql_python import connect
 
 app = Flask(__name__)
+CORS(app)  # <--- Esto permite que tu HTML se conecte a la API
 
 resend.api_key = os.getenv("RESEND_API_KEY")
 
