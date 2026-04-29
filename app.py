@@ -16,14 +16,18 @@ def enviar_correo_alerta(asunto, mensaje, destino):
     msg['From'] = email_remitente
     msg['To'] = destino
 
-    # Conexión directa SSL (Puerto 465) para evitar retardos de STARTTLS
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=15) as server:
-            server.login(email_remitente, email_password)
-            server.send_message(msg)
+        # Usamos el puerto 587 que suele estar abierto en Render
+        # Agregamos un timeout explícito para que no se quede colgado
+        server = smtplib.SMTP("smtp.gmail.com", 587, timeout=10)
+        server.set_debuglevel(1) # Esto imprimirá info en tus logs de Render
+        server.starttls() # Cifrado obligatorio para el puerto 587
+        server.login(email_remitente, email_password)
+        server.send_message(msg)
+        server.quit()
         return True
     except Exception as e:
-        print(f"Error SMTP: {e}")
+        print(f"LOG DE ERROR SMTP: {str(e)}")
         raise e
 
 def get_connection():
