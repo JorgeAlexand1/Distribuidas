@@ -1,33 +1,24 @@
 import os
-import smtplib
-from email.message import EmailMessage
+import resend
 from flask import Flask, jsonify, request
 from mssql_python import connect
 
 app = Flask(__name__)
 
+resend.api_key = os.getenv("RESEND_API_KEY")
+
 def enviar_correo_alerta(asunto, mensaje, destino):
-    email_remitente = os.getenv("EMAIL_USER")
-    email_password = os.getenv("EMAIL_PASSWORD")
-
-    msg = EmailMessage()
-    msg.set_content(mensaje)
-    msg['Subject'] = asunto
-    msg['From'] = email_remitente
-    msg['To'] = destino
-
     try:
-        # Usamos el puerto 587 que suele estar abierto en Render
-        # Agregamos un timeout explícito para que no se quede colgado
-        server = smtplib.SMTP("smtp.gmail.com", 587, timeout=10)
-        server.set_debuglevel(1) # Esto imprimirá info en tus logs de Render
-        server.starttls() # Cifrado obligatorio para el puerto 587
-        server.login(email_remitente, email_password)
-        server.send_message(msg)
-        server.quit()
-        return True
+        
+        r = resend.Emails.send({
+            "from": "onboarding@resend.dev",
+            "to": destino,
+            "subject": asunto,
+            "html": f"<p>{mensaje}</p>"
+        })
+        return r
     except Exception as e:
-        print(f"LOG DE ERROR SMTP: {str(e)}")
+        print(f"Error en Resend: {e}")
         raise e
 
 def get_connection():
@@ -156,15 +147,22 @@ def enviar_alerta():
         destino = data.get("to")
         asunto = data.get("subject")
         mensaje = data.get("message")
-
+        
         if not all([destino, asunto, mensaje]):
-            return jsonify({"success": False, "error": "Faltan datos"}), 400
+             return jsonify({"success": False, "error": "Faltan campos"}), 400
 
         enviar_correo_alerta(asunto, mensaje, destino)
         
-        return jsonify({"success": True, "message": "Correo enviado con Gmail"})
+        return jsonify({
+            "success": True, 
+            "message": "Alerta enviada con éxito mediante Resend"
+        })
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({
+            "success": False, 
+            "error_detalle": str(e)
+        }), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
